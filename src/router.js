@@ -6,6 +6,7 @@ const path = require('path');
 const express = require('express');
 const { ToyHub } = require('./hub');
 const { handleRpc } = require('./mcp');
+const { handleOAuthRpc } = require('./oauth-tools');
 const { SavedScores, AudioClips, ToyAliases } = require('./store');
 const { transcribe } = require('./voice');
 
@@ -46,7 +47,7 @@ function openStream(res) {
 // Mountable router: pages at /, REST under /api, MCP at /mcp. Returns null without a token.
 // voiceConfig: optional async (actor) => { apiKey, voice_id, baseURL }. A host running several
 // AIs can return a different voice per actor, or throw when one has no voice of its own.
-function createToyHub({ token, hub = new ToyHub(), saved = new SavedScores(path.join(DATA_DIR, 'saved-scores.json')), voiceConfig } = {}) {
+function createToyHub({ token, hub = new ToyHub(), saved = new SavedScores(path.join(DATA_DIR, 'saved-scores.json')), voiceConfig, oauth } = {}) {
   if (!token) return null;
   hub.saved = saved;
   hub.aliases = hub.aliases || new ToyAliases(path.join(DATA_DIR, 'toy-names.json'));
@@ -56,18 +57,31 @@ function createToyHub({ token, hub = new ToyHub(), saved = new SavedScores(path.
     try { res.json(await fn(req)); } catch (e) { res.status(e.statusCode || 500).json({ error: e.message }); }
   };
 
-  router.use(['/api', '/mcp'], (req, res, next) => {
-    res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Authorization, Content-Type, Mcp-Session-Id', 'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS' });
+  router.use(['/api', '/mcp'], async (req, res, next) => {
+    res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Authorization, Content-Type, Mcp-Session-Id, MCP-Protocol-Version', 'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS', 'Access-Control-Expose-Headers': 'WWW-Authenticate', 'Cache-Control': 'no-store' });
     if (req.method === 'OPTIONS') return res.sendStatus(204);
     const bearer = (req.headers.authorization || '').replace(/^bearer\s+/i, '');
-    // Chat apps' connector screens often take only a URL, so /mcp also accepts ?key=.
-    const given = bearer || (req.baseUrl.endsWith('/mcp') ? req.query.key : '');
-    if (!safeEqual(given, token)) return res.status(401).json({ error: 'unauthorized' });
-    next();
+    const isMcp = req.baseUrl.endsWith('/mcp');
+    // Legacy URL keys remain available only when OAuth is disabled. Production
+    // clients use bearer headers, so secrets never need to enter callback URLs.
+    const given = bearer || (!oauth && isMcp ? req.query.key : '');
+    if (safeEqual(given, token)) return next();
+    if (oauth && isMcp) {
+      if (bearer) {
+        try { req.auth = await oauth.verifyAccessToken(bearer); return next(); } catch { /* fail closed */ }
+      }
+      res.set('WWW-Authenticate', `Bearer resource_metadata="${oauth.metadataUrl}", scope="toy:read toy:control"${bearer ? ', error="invalid_token"' : ''}`);
+    }
+    return res.status(401).json({ error: 'unauthorized' });
   });
   router.use(express.json({ limit: '2mb' })); // freehand drawings can be long
 
   router.get('/api/state', (_req, res) => res.json(hub.state()));
+
+  if (oauth) {
+    router.get('/api/oauth-connections', reply(() => ({ connections: oauth.connections() })));
+    router.delete('/api/oauth-connections/:id', reply((req) => { oauth.revokeGrant(req.params.id); return { ok: true }; }));
+  }
 
   router.get('/api/events', (req, res) => {
     const stream = openStream(res);
@@ -143,11 +157,11 @@ function createToyHub({ token, hub = new ToyHub(), saved = new SavedScores(path.
   router.post('/mcp', async (req, res) => {
     // The name shown on the panel: add ?name=YourAI to the connector URL (or an x-client-name header).
     const name = String(req.query.name || req.get('x-client-name') || 'AI').slice(0, 20);
-    const answer = await handleRpc(hub, req.body, `mcp:${name}`);
+    const answer = req.auth ? await handleOAuthRpc(hub, req.body, req.auth) : await handleRpc(hub, req.body, `mcp:${name}`);
     if (!answer) return res.status(202).end();
     res.json(answer);
   });
-  router.get('/mcp', (_req, res) => res.status(405).json({ error: 'use POST' }));
+  router.get('/mcp', (_req, res) => res.set('Allow', 'POST').status(405).json({ error: 'use POST' }));
 
   router.use(express.static(path.join(__dirname, '..', 'public'), { index: 'panel.html' }));
   router.hub = hub;

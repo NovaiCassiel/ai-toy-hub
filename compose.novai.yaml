@@ -7,6 +7,7 @@ services:
     environment:
       TOY_HUB_TOKEN: ${TOY_HUB_TOKEN:?Set a private Hub token}
       TOY_HUB_MAX_SECONDS: 300
+      TOY_HUB_PUBLIC_URL: ${TOY_HUB_PUBLIC_URL:-}
     ports:
       - "127.0.0.1:13737:3737"
     networks:

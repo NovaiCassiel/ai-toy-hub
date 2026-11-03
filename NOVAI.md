@@ -27,6 +27,42 @@ Novai deployment and a standby gate to the browser relay.
   reconnections return to standby. Software can only request a stop while the
   computer and Bluetooth still function; the device's physical stop remains available.
 
+## ChatGPT OAuth
+
+Set `TOY_HUB_PUBLIC_URL` to the public HTTPS origin (no path), then rebuild this
+service. Add `https://<that-host>/mcp` to ChatGPT as a custom MCP server with OAuth.
+Dynamic registration is supported; no Hub key or client secret goes into ChatGPT.
+The existing Brain and relay bearer keys continue to work unchanged. OAuth mode
+disables the legacy `/mcp?key=...` shortcut.
+
+Start the connection in the desktop browser that already holds the relay key.
+The consent page uses that locally saved key only after **允许连接** is clicked.
+Another browser needs the same private owner key entered on the Hub consent page.
+Only an authorization code returns to ChatGPT. The page never hands over the owner
+key and never enables Bluetooth control. Local **允许控制** is still required.
+
+- Discovery: `/.well-known/oauth-protected-resource/mcp` and
+  `/.well-known/oauth-authorization-server`; audience is the exact `/mcp` URL.
+- SDK protocol handlers provide public-client registration, authorization-code
+  exchange with mandatory S256 PKCE, refresh and revocation. Registration allows
+  only the exact ChatGPT callback paths; no arbitrary redirect hosts or client
+  credentials grant. Authorization responses include the issuer.
+- Tokens are scoped to `toy:read` / `toy:control` and work only at `/mcp`.
+  Six bounded tools are exposed; voice, microphone and relay administration are
+  excluded. Fixed/pattern commands default to Vibrate and at most 300 seconds.
+- Access tokens last one hour. Refresh tokens rotate; reuse revokes the grant.
+  An authorization lasts at most 30 days before reconnection is needed.
+- Clients and token hashes persist in `/data/oauth.json` (private, atomic writes).
+  Preserve this volume across deploys. Rotating the owner key invalidates OAuth
+  grants on restart. Storage corruption fails startup instead of dropping grants.
+- **ChatGPT 连接管理** in the relay opens `/connections.html`. The owner can revoke
+  a connection immediately; this blocks further requests. Use the relay stop
+  button to stop an already-running command.
+
+Tests use the official MCP client for discovery, registration, PKCE, refresh and
+tool discovery, plus simulated devices for standby and input bounds. A successful
+test is not proof of installation in the owner's actual ChatGPT account.
+
 ## Local changes
 
 - MCP percentages are unambiguous: `1` is 1%, not 100%. REST/relay normalized
@@ -35,8 +71,9 @@ Novai deployment and a standby gate to the browser relay.
   relays reject motion; stop remains available. Reconnect discards previous targets.
 - Production commands have a 300-second maximum; no indefinite command.
 - SOSEXY exposes only Vibrate and Suction, whose GATT endpoints were inspected.
-  Electric is not exposed. Physical output and any Pro-specific initialization
-  still require an attended hardware test; GATT discovery is not proof of output.
+  Electric is not exposed. The owner observed output and stop at Vibrate 1% for
+  1 second and Suction 5% for 1 second. This does not establish a minimum threshold,
+  full-range behavior, or physical-stop behavior during computer/Bluetooth loss.
 - The container runs as a non-root user with a read-only filesystem, persistent
   `/data`, bounded logs, and a health check. Voice credentials are not configured
   by this Compose file; optional audio services remain outside this setup.

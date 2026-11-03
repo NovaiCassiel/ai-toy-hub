@@ -1,0 +1,26 @@
+:root { color-scheme: dark; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #eee8f5; background: #151220; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100svh; padding: 48px 20px; background: radial-gradient(ellipse at 10% 0, #42334988, transparent 60%); }
+main { width: min(100%, 480px); margin: 5vh auto; padding: 32px; background: #272130e8; border: 1px solid #c9add133; border-radius: 26px; box-shadow: 0 24px 80px #0003; }
+.eyebrow { color: #c6aecb; letter-spacing: .2em; font-size: 11px; }
+h1 { font-size: 27px; font-weight: 550; margin: 24px 0 14px; }
+.intro { line-height: 1.7; overflow-wrap: anywhere; }
+.permissions { padding: 18px 18px 18px 36px; border-radius: 16px; background: #18141f66; line-height: 2; font-size: 14px; }
+.note { color: #bcb1c6; font-size: 12px; line-height: 1.7; }
+label { display: block; margin: 26px 0 10px; font-size: 14px; }
+input[type=password] { width: 100%; padding: 13px 14px; border: 1px solid #a897b255; background: #17131f; border-radius: 12px; color: inherit; font-size: 15px; }
+input::placeholder { color: #988aa2; font-size: 12px; }
+.actions { display: flex; gap: 12px; margin-top: 25px; }
+button { padding: 12px 18px; background: #dbc6e6; color: #2c2232; border: 1px solid transparent; border-radius: 13px; font: inherit; font-size: 14px; cursor: pointer; min-height: 44px; }
+.actions button { flex: 1; }
+button.secondary { color: #ded3e5; background: transparent; border-color: #bda0cf44; }
+button:disabled { opacity: .5; cursor: wait; }
+:focus-visible { outline: 2px solid #ddc1ed; outline-offset: 3px; }
+#status { min-height: 1.5em; color: #e5c3d7; font-size: 13px; line-height: 1.7; }
+#grants { padding: 0; list-style: none; }
+#grants li { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 16px 0; border-top: 1px solid #c9add133; }
+#grants span { overflow-wrap: anywhere; }
+#grants small { display: block; color: #bcb1c6; margin-top: 6px; }
+#grants button { flex-shrink: 0; }
+.back { color: #d6bbdf; font-size: 14px; text-underline-offset: 4px; }
+@media (max-width: 480px) { body { padding: 20px 14px; } main { padding: 24px; margin: 3vh auto; } }
