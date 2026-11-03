@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
-const { createToyHub } = require('./src/router');
+const { createToyHub, ToyHub } = require('./src/router');
 
 const envFile = path.join(__dirname, '.env');
 if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
@@ -25,7 +25,13 @@ const voiceConfig = process.env.ELEVENLABS_API_KEY
   : undefined;
 
 const app = express();
-app.use('/', createToyHub({ token, voiceConfig }));
+app.disable('x-powered-by');
+app.get('/health', (_req, res) => res.json({ ok: true }));
+const maxSeconds = Number(process.env.TOY_HUB_MAX_SECONDS || 300);
+if (!Number.isInteger(maxSeconds) || maxSeconds < 1 || maxSeconds > 3600) {
+  throw new Error('TOY_HUB_MAX_SECONDS must be 1-3600');
+}
+app.use('/', createToyHub({ token, voiceConfig, hub: new ToyHub({ maxSeconds }) }));
 
 const port = Number(process.env.PORT || 3737);
 const host = process.env.HOST || '127.0.0.1';

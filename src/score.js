@@ -26,7 +26,7 @@ const SHAPES = {
 };
 
 async function buildScore({ text, shape, strokes, intensity = 70, speed = 1 } = {}, deps = {}) {
-  const peak = clamp(Number(intensity) > 1 ? Number(intensity) / 100 : Number(intensity), 0.05, 1);
+  const peak = clamp(Number(intensity) > 1 ? Number(intensity) / 100 : Number(intensity), 0, 1);
   const pace = clamp(Number(speed) || 1, 0.3, 3);
   const groups = []; // each group = one character/shape: strokes in canvas units
   const skipped = [];
