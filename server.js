@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const { createToyHub, ToyHub } = require('./src/router');
+const { HubOAuth } = require('./src/oauth');
 
 const envFile = path.join(__dirname, '.env');
 if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
@@ -31,7 +32,13 @@ const maxSeconds = Number(process.env.TOY_HUB_MAX_SECONDS || 300);
 if (!Number.isInteger(maxSeconds) || maxSeconds < 1 || maxSeconds > 3600) {
   throw new Error('TOY_HUB_MAX_SECONDS must be 1-3600');
 }
-app.use('/', createToyHub({ token, voiceConfig, hub: new ToyHub({ maxSeconds }) }));
+const oauth = process.env.TOY_HUB_PUBLIC_URL ? new HubOAuth({
+  publicUrl: process.env.TOY_HUB_PUBLIC_URL,
+  token,
+  file: path.join(process.env.TOY_HUB_DATA || path.join(__dirname, 'data'), 'oauth.json'),
+}) : undefined;
+if (oauth) app.use(oauth.router());
+app.use('/', createToyHub({ token, voiceConfig, hub: new ToyHub({ maxSeconds }), oauth }));
 
 const port = Number(process.env.PORT || 3737);
 const host = process.env.HOST || '127.0.0.1';
