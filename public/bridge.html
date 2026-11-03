@@ -34,12 +34,17 @@
       <p id="empty" class="note">玩具开机后点对应的按钮，在弹出的列表里选它。</p>
     </section>
 
-    <button id="panic" class="panic">全部停下</button>
+    <section>
+      <h2>3 · 本次控制</h2>
+      <button id="arm" class="primary">允许控制</button>
+      <div id="control-status">待机 · 连接后不会自动动作</div>
+    </section>
+    <button id="panic" class="panic">停止并回到待机</button>
 
     <section>
       <h2>动静</h2>
       <ul id="log"></ul>
-      <p class="note">开始中继后通知栏会多一条「中继运行中」（在放一段听不见的声音，防止安卓把页面冻住），这样切到别的 App 也能继续。万一还是断了，玩具会自动停。</p>
+      <p class="note">电脑需保持唤醒。断线时中继会尝试停止，重连后回到待机；若蓝牙或电脑已经断开，请用设备实体键停止。</p>
     </section>
   </main>
   <script type="module" src="bridge.js"></script>

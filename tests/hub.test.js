@@ -101,7 +101,7 @@ test('drawing still reaches the canvas when no toy is online', async () => {
   const res = hub.playScore(await buildScore({ shape: 'circle' }), { label: '画画' });
   assert.equal(res.toyOffline, true);
   assert.ok(seen.includes('score'));
-  assert.throws(() => hub.command({ action: 'stop', source: 'mcp:companion' }), /no toy connected/);
+  assert.throws(() => hub.command({ action: 'stop', source: 'mcp:companion' }), /no available toy/);
   assert.ok(seen.includes('halt'), 'stop still tells panels to cut the drawing');
 });
 
@@ -156,7 +156,7 @@ test('a relay that stops beating is reported asleep, and commands say so', () =>
   hub.checkRelays();
   assert.equal(hub.state().relayAsleep, true);
   assert.equal(emitted.at(-1), true, 'open panels are told');
-  assert.match(hub.command({ action: 'level', level: 20 }).note, /asleep/);
+  assert.throws(() => hub.command({ action: 'level', level: 20 }), /no available toy/);
   hub.beat('b-test');
   assert.equal(hub.state().relayAsleep, false);
   assert.equal(emitted.at(-1), false);
@@ -226,7 +226,7 @@ test('activity is tracked and cleared on stop or bridge loss', () => {
   assert.equal(hub.listDevices().find((d) => d.id === 'vibe').activity, null);
   detach();
   assert.equal(hub.state().online, false);
-  assert.throws(() => hub.command({ action: 'stop' }), /no toy connected/);
+  assert.throws(() => hub.command({ action: 'stop' }), /no available toy/);
 });
 
 test('mcp tools list and call', async () => {

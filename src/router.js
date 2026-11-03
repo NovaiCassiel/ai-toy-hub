@@ -134,7 +134,7 @@ function createToyHub({ token, hub = new ToyHub(), saved = new SavedScores(path.
   });
 
   router.post('/api/bridge/report', (req, res) => {
-    try { hub.report(String(req.body?.bridgeId || ''), req.body?.devices); res.json({ ok: true }); }
+    try { hub.report(String(req.body?.bridgeId || ''), req.body?.devices, req.body?.controlEnabled === true); res.json({ ok: true }); }
     catch (e) { res.status(e.statusCode || 500).json({ error: e.message }); }
   });
 

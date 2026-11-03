@@ -7,7 +7,6 @@ const WRITE = '0000ee03-0000-1000-8000-00805f9b34fb';
 const MOTORS = [
   { type: 'Vibrate', mode: [0x01, 0x02] },
   { type: 'Suction', mode: [0x07, 0x08] },
-  { type: 'Electric', mode: [0x03, 0x04] },
 ];
 const frame = ([m1, m2], pct) => new Uint8Array([0x01, 0x01, 0x00, 0x02, 0x00, m1, 0x11, pct, 0x00, m2, 0x11, 0x01]);
 

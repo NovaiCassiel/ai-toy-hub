@@ -7,6 +7,16 @@ const { buildVoiceScore } = require('./voice');
 const deviceProp = { type: 'string', description: 'Toy from toy_status — the nickname the user gave it (alias), its name, or key. Omit to drive every connected toy.' };
 const secondsProp = { type: 'number', description: 'How long it runs before auto-stopping. 0 = keep going until stopped. Default 30.' };
 
+// MCP inputs are percentages, unlike the internal relay's normalized 0..1 levels.
+// In particular, 1 means one percent, never full intensity.
+function percent(value, fallback) {
+  const number = value == null ? fallback : value;
+  if (typeof number !== 'number' || !Number.isFinite(number) || number < 0 || number > 100) {
+    throw new Error('intensity must be a percentage between 0 and 100');
+  }
+  return number / 100;
+}
+
 const TOOLS = [
   {
     name: 'toy_status',
@@ -93,7 +103,7 @@ const TOOLS = [
 async function callTool(hub, name, args = {}, source = 'mcp:AI', actor) {
   switch (name) {
     case 'toy_draw': {
-      const score = await buildScore(args);
+      const score = await buildScore({ ...args, intensity: percent(args.intensity, 70) });
       const label = args.text ? `写字：${args.text}` : '画画';
       return { ...hub.playScore(score, { device: args.device, source, label, clear: args.clear !== false }), skipped: score.skipped };
     }
@@ -106,14 +116,17 @@ async function callTool(hub, name, args = {}, source = 'mcp:AI', actor) {
     }
     case 'toy_speak': {
       if (!hub.voice) throw new Error('voice is not enabled on this hub');
-      const { audio, ...score } = await buildVoiceScore(args, await hub.voice.getConfig(actor));
+      const { audio, ...score } = await buildVoiceScore({ ...args, intensity: percent(args.intensity, 70) }, await hub.voice.getConfig(actor));
       const audioId = hub.voice.clips.put(audio);
       const label = `说：${score.text.replace(/\[[^\]]*\]/g, '').trim().slice(0, 18)}`;
       return { ...hub.playScore({ ...score, audioId }, { device: args.device, source, label }), characters: score.text.length };
     }
     case 'toy_replay': return args.name ? hub.replaySaved(args.name, { device: args.device, source }) : { saved: hub.saved?.list() || [] };
-    case 'toy_vibrate': return hub.command({ ...args, action: 'level', source });
-    case 'toy_pattern': return hub.command({ ...args, action: 'pattern', pattern: args.steps || args.pattern || 'wave', source });
+    case 'toy_vibrate': return hub.command({ ...args, level: percent(args.level), action: 'level', source });
+    case 'toy_pattern': {
+      const pattern = args.steps ? args.steps.map((step) => ({ ...step, level: percent(step.level) })) : args.pattern || 'wave';
+      return hub.command({ ...args, intensity: percent(args.intensity, 100), action: 'pattern', pattern, source });
+    }
     case 'toy_stop': return hub.command({ action: 'stop', device: args.device, source });
     default: throw Object.assign(new Error(`Unknown tool: ${name}`), { code: -32601 });
   }

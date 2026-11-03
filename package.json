@@ -8,7 +8,7 @@
   "engines": { "node": ">=20.12" },
   "scripts": {
     "start": "node server.js",
-    "test": "node --test tests/hub.test.js tests/router.test.js"
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "express": "^4.18.2"

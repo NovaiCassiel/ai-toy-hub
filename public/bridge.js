@@ -13,6 +13,13 @@ sessionStorage.setItem('toyhub.bridge', bridgeId);
 let pingMs = 15000;
 let lastPing = 0;
 let abort = null;
+let armed = false;
+
+function disarm() {
+  armed = false;
+  $('arm').disabled = false;
+  $('control-status').textContent = '待机 · 需要重新允许控制';
+}
 
 function log(text) {
   const li = document.createElement('li');
@@ -41,13 +48,16 @@ async function report() {
   render();
   if (!lastPing) return;
   const payload = [...devices.values()].map(({ id, name, driver, actuators, battery }) => ({ id, name, driver, actuators, battery }));
-  try { await api('/api/bridge/report', { bridgeId, devices: payload }); } catch (e) { log(`上报失败：${e.message}`); }
+  try {
+    await api('/api/bridge/report', { bridgeId, devices: payload, controlEnabled: armed });
+    return true;
+  } catch (e) { log(`上报失败：${e.message}`); return false; }
 }
 
 function addDevices(list) {
   for (const d of list) {
     devices.set(d.id, d);
-    d.onGone = () => { halt(d.id); devices.delete(d.id); log(`${d.name} 断开了`); report(); };
+    d.onGone = () => { disarm(); haltAll(); devices.delete(d.id); log(`${d.name} 断开了`); report(); };
     log(`连上 ${d.name}`);
   }
   report();
@@ -61,8 +71,8 @@ function halt(id, only) {
   if (only) only.forEach((i) => d.set(i, 0)); else d.stopAll();
 }
 
-function haltAll(reason) {
-  for (const id of devices.keys()) halt(id);
+function haltAll(reason, force = false) {
+  for (const id of devices.keys()) if (force || running.has(id)) halt(id);
   if (reason) log(reason);
   render();
 }
@@ -70,6 +80,7 @@ function haltAll(reason) {
 function exec(cmd) {
   const d = devices.get(cmd.deviceId);
   if (!d) return;
+  if (cmd.action !== 'stop' && !armed) return;
   const prev = running.get(d.id);
   if (prev) prev.timers.forEach(clearTimeout);
   running.delete(d.id);
@@ -78,7 +89,7 @@ function exec(cmd) {
     running.set(d.id, { actuators: prev?.actuators || [], timers: [setTimeout(() => exec({ ...cmd, startIn: 0 }), cmd.startIn)] });
     return;
   }
-  if (cmd.action === 'stop') { d.stopAll(); log(`停 · ${d.name}`); return render(); }
+  if (cmd.action === 'stop') { disarm(); haltAll('已请求停止，回到待机', true); report(); return; }
 
   const leftover = (prev?.actuators || []).filter((i) => !cmd.actuators.includes(i));
   leftover.forEach((i) => d.set(i, 0));
@@ -111,7 +122,7 @@ async function connectLoop() {
       setStatus('正在连云端…', false);
       await stream(`/api/bridge/stream?id=${bridgeId}`, (event, data) => {
         lastPing = Date.now();
-        if (event === 'hello') { pingMs = data.pingMs; setStatus('已连上云端，可以开始了', true); report(); }
+        if (event === 'hello') { disarm(); pingMs = data.pingMs; setStatus('已连上云端', true); report(); }
         if (event === 'cmd') exec(data);
       }, abort.signal);
     } catch (e) {
@@ -119,7 +130,8 @@ async function connectLoop() {
       log(`云端断开：${e.message}`);
     }
     lastPing = 0;
-    haltAll('和云端失联，已经全部停下');
+    disarm();
+    haltAll('和云端失联，已尝试停止；请核对设备');
     setStatus('失联了，3 秒后重连…', false);
     await new Promise((r) => setTimeout(r, 3000));
   }
@@ -128,7 +140,7 @@ async function connectLoop() {
 // Tells the hub this page is really awake; a frozen page stops beating and the hub can say so.
 setInterval(() => { if (lastPing) api('/api/bridge/beat', { bridgeId }).catch(() => {}); }, 10000);
 setInterval(() => {
-  if (lastPing && Date.now() - lastPing > pingMs * 3) { lastPing = 0; haltAll('云端心跳超时，已经全部停下'); abort?.abort(); abort = new AbortController(); }
+  if (lastPing && Date.now() - lastPing > pingMs * 3) { lastPing = 0; disarm(); haltAll('云端心跳超时，已尝试停止'); abort?.abort(); abort = new AbortController(); }
 }, 5000);
 setInterval(async () => {
   for (const d of devices.values()) await d.readBattery().catch(() => null);
@@ -159,6 +171,20 @@ $('start').onclick = () => {
 $('lovense').onclick = () => tryConnect(connectLovense, 'Lovense');
 $('sosexy').onclick = () => tryConnect(connectSosexy, '啵啵贝');
 $('intiface').onclick = () => tryConnect(() => connectIntiface(undefined, (list) => addDevices(list.filter((d) => !devices.has(d.id)))), 'Intiface');
-$('panic').onclick = () => haltAll('按了急停');
+$('arm').onclick = async () => {
+  if (!lastPing || !devices.size) { log('先连上云端和设备'); return; }
+  armed = true;
+  if (!(await report())) { disarm(); return; }
+  if (!armed) return;
+  $('arm').disabled = true;
+  $('control-status').textContent = '本次控制已允许';
+};
+$('panic').onclick = () => {
+  disarm();
+  haltAll('已请求停止，回到待机', true);
+  report();
+  api('/api/command', { action: 'stop' }).catch(() => log('云端未确认停止，请核对设备'));
+};
+window.addEventListener('pagehide', () => { disarm(); haltAll(); });
 if (!navigator.bluetooth) $('ble-note').hidden = false;
 render();

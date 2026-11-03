@@ -64,7 +64,7 @@ function envelopeToSteps(rms, peak = 0.7) {
 async function buildVoiceScore({ text, intensity = 70, model }, config, deps = {}) {
   const clean = String(text || '').trim();
   if (!clean) throw Object.assign(new Error('text is required'), { statusCode: 400 });
-  const peak = Math.min(1, Math.max(0.05, Number(intensity) > 1 ? Number(intensity) / 100 : Number(intensity) || 0.7));
+  const peak = Math.min(1, Math.max(0, Number(intensity) > 1 ? Number(intensity) / 100 : Number(intensity)));
   const audio = await (deps.synthesize || synthesize)(clean, config, { model });
   const rms = await (deps.loudness || loudness)(audio);
   const { steps, wave } = envelopeToSteps(rms, peak);

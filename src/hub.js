@@ -47,7 +47,7 @@ class ToyHub {
   attachBridge(bridgeId, send) {
     const prev = this.bridges.get(bridgeId);
     if (prev) prev.close?.();
-    const bridge = { send, devices: prev?.devices || [], connectedAt: this.now(), lastSeen: this.now() };
+    const bridge = { send, devices: [], controlEnabled: false, connectedAt: this.now(), lastSeen: this.now() };
     this.bridges.set(bridgeId, bridge);
     this.emit();
     return () => {
@@ -58,7 +58,7 @@ class ToyHub {
     };
   }
 
-  report(bridgeId, devices) {
+  report(bridgeId, devices, controlEnabled = true) {
     const bridge = this.bridges.get(bridgeId);
     if (!bridge) throw Object.assign(new Error('bridge not connected'), { statusCode: 409 });
     bridge.devices = (Array.isArray(devices) ? devices : []).slice(0, 16).map((d) => ({
@@ -69,6 +69,7 @@ class ToyHub {
       actuators: (d.actuators || []).slice(0, 8).map((a) => ({ type: String(a.type || 'Vibrate') })),
     }));
     bridge.lastSeen = this.now();
+    bridge.controlEnabled = controlEnabled === true;
     this.emit();
   }
 
@@ -79,7 +80,7 @@ class ToyHub {
         const key = `${bridgeId}/${d.id}`;
         const act = this.activity.get(key);
         const live = act && (act.until === null || act.until > this.now());
-        out.push({ key, bridgeId, ...d, alias: this.aliases?.get(d.name) || null, activity: live ? act : null });
+        out.push({ key, bridgeId, ...d, controlEnabled: bridge.controlEnabled, alias: this.aliases?.get(d.name) || null, activity: live ? act : null });
       }
     }
     return out;
@@ -90,7 +91,7 @@ class ToyHub {
       online: this.bridges.size > 0,
       relayAsleep: this.relayAsleep(),
       ...(this.relayAsleep() ? { note: ASLEEP_NOTE } : {}),
-      bridges: [...this.bridges.entries()].map(([id, b]) => ({ id, connectedAt: b.connectedAt, asleep: this.isAsleep(b), devices: b.devices.length })),
+      bridges: [...this.bridges.entries()].map(([id, b]) => ({ id, connectedAt: b.connectedAt, asleep: this.isAsleep(b), controlEnabled: b.controlEnabled, devices: b.devices.length })),
       devices: this.listDevices(),
       patterns: Object.fromEntries(Object.entries(PATTERNS).map(([k, v]) => [k, v.label])),
       recent: this.history.slice(-10),
@@ -138,8 +139,9 @@ class ToyHub {
     if (!['level', 'pattern', 'stop'].includes(action)) throw badRequest('action must be level, pattern or stop');
     // Every open panel cuts its running drawing/voice too, whoever pressed stop — even with no toy online.
     if (action === 'stop') for (const fn of this.watchers) fn('halt', { source: cmd.source || 'panel' });
-    const targets = this.resolveTargets(cmd.device);
-    if (!targets.length) throw Object.assign(new Error('no toy connected — open the bridge page near the toy first'), { statusCode: 409 });
+    const targets = this.resolveTargets(cmd.device).filter(({ bridge }) =>
+      action === 'stop' || (bridge.controlEnabled && !this.isAsleep(bridge)));
+    if (!targets.length) throw Object.assign(new Error('no available toy — connect the bridge and allow control first'), { statusCode: 409 });
 
     const seconds = action === 'stop' ? 0 : clampSeconds(cmd.seconds, this.maxSeconds);
     const loop = cmd.loop !== false;
