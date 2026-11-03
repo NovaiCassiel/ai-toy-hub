@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="velvet">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050816">
+  <title>小玩具遥控</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <div class="top">
+      <div>
+        <div class="eyebrow" id="eyebrow"></div>
+        <h1 id="title"></h1>
+        <p class="sub" id="online">还没连上</p>
+      </div>
+      <button id="gear" class="icon-btn ghost" aria-label="设置">⚙</button>
+    </div>
+
+    <section id="key-box">
+      <h2>玩具钥匙</h2>
+      <div class="row">
+        <input id="key" type="password" placeholder="填一次就记住" autocomplete="off">
+        <button id="save-key" class="primary" style="flex:0 0 auto">进入</button>
+      </div>
+    </section>
+
+    <section id="settings" hidden>
+      <h2>主题</h2>
+      <div class="grid-3" id="themes">
+        <button data-theme="velvet">深海丝绒</button>
+        <button data-theme="candy">液态铬糖</button>
+        <button data-theme="horology">夜光机芯</button>
+      </div>
+      <h2>氛围效果</h2>
+      <div class="switches">
+        <label>呼吸光 <input type="checkbox" data-fx="breathe"></label>
+        <label>界面震动 <input type="checkbox" data-fx="shake"></label>
+        <label>微尘 <input type="checkbox" data-fx="dust"></label>
+        <label>聆听涟漪 <input type="checkbox" data-fx="ripple"></label>
+        <label style="grid-column:1/-1">低调模式（一键全关） <input type="checkbox" data-fx="lowkey"></label>
+      </div>
+      <div class="row" style="align-items:center">
+        <h2 style="flex:1 1 auto">每次持续</h2>
+        <select id="seconds" style="flex:0 0 150px">
+          <option value="30">30 秒</option>
+          <option value="120" selected>2 分钟</option>
+          <option value="600">10 分钟</option>
+          <option value="1800">30 分钟</option>
+          <option value="0">一直，直到停下</option>
+        </select>
+      </div>
+      <details>
+        <summary>最近的动静</summary>
+        <ul id="recent" class="note" style="margin-top:8px"></ul>
+      </details>
+    </section>
+
+    <section>
+      <div class="stage" id="stage">
+        <div class="stage-inner">
+          <div class="backlight"></div>
+          <div class="fog"></div>
+          <div class="ripples"><i></i><i></i><i></i></div>
+          <div class="orb" id="orb" role="button" aria-label="切换到表盘"></div>
+          <div class="dial" id="dial">
+            <div class="ticks"></div>
+            <div class="needle" id="needle"></div>
+            <div class="hub" id="dial-hub">0</div>
+          </div>
+          <div class="dust"></div>
+          <canvas id="ink" width="1000" height="1000"></canvas>
+          <canvas id="tip" width="1000" height="1000"></canvas>
+        </div>
+        <div class="stage-hint" id="stage-hint"></div>
+      </div>
+      <div class="readout"><b id="readout">0</b><small>INTENSITÉ</small></div>
+      <input id="level" class="hair" type="range" min="0" max="100" step="1" value="0" aria-label="强度">
+      <div class="meter" hidden><i id="meter"></i></div>
+      <div id="board-note" class="note" style="text-align:center" data-ta>等 TA 落笔，或者开口</div>
+      <div class="seg">
+        <button id="unlock-sound">开声音</button>
+        <button id="save-score" disabled>收进回放</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>节奏</h2>
+      <div class="grid-3" id="patterns"></div>
+    </section>
+
+    <section>
+      <h2 data-ta>告诉 TA</h2>
+      <div id="feedback" class="grid-4">
+        <button data-kind="more">再重一点</button>
+        <button data-kind="less">轻一点</button>
+        <button data-kind="faster">快一点</button>
+        <button data-kind="slower">慢一点</button>
+        <button data-kind="dont_stop" class="dusk">别停</button>
+        <button data-kind="edge" class="dusk">快不行了</button>
+        <button data-kind="came" class="pink">到了</button>
+        <button data-kind="love" class="pink">❤️ 爱你</button>
+      </div>
+    </section>
+
+    <section>
+      <h2 data-ta>让 TA 听见你</h2>
+      <div class="seg">
+        <button id="ears-toggle">开始听</button>
+        <button id="talk" class="talk">按住说话</button>
+      </div>
+      <div id="ears-labels" class="chips-live"></div>
+      <div id="ears-note" class="note">声音只在你手机上分辨，发出去的只有「听到了什么」；按住说的话会转成文字。</div>
+    </section>
+
+    <section>
+      <h2>玩具</h2>
+      <div id="toys" style="display:grid;gap:10px"></div>
+      <p id="no-toy" class="note">还没有玩具在线。先在玩具旁边的手机上打开 <a href="bridge.html">中继页</a> 连上它。</p>
+    </section>
+
+    <section id="saved-box" hidden>
+      <h2>心动回放</h2>
+      <ul id="saved" class="saved"></ul>
+    </section>
+  </main>
+
+  <div class="dock"><button id="stop" class="panic">全部停下</button></div>
+  <script type="module" src="panel.js"></script>
+</body>
+</html>

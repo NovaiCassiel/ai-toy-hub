@@ -1,0 +1,16 @@
+{
+  "name": "ai-toy-hub",
+  "version": "0.1.0",
+  "description": "Let your AI companion touch you: a self-hosted, multi-brand BLE toy hub with an MCP server, a phone relay and a control panel.",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "main": "server.js",
+  "engines": { "node": ">=20.12" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/hub.test.js tests/router.test.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

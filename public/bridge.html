@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050816">
+  <title>小玩具中继</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <div>
+      <div class="eyebrow">AI TOY HUB</div>
+      <h1>小玩具中继</h1>
+      <p class="sub">放在玩具旁边的手机或电脑上开着，来自云端的指令就靠它传给玩具。</p>
+    </div>
+
+    <section>
+      <h2>1 · 连上云端</h2>
+      <input id="key" type="password" placeholder="玩具钥匙（只需要填一次）" autocomplete="off">
+      <button id="start" class="primary">开始中继</button>
+      <div id="status">还没连</div>
+    </section>
+
+    <section>
+      <h2>2 · 连上玩具</h2>
+      <div class="row">
+        <button id="lovense">Lovense</button>
+        <button id="sosexy">啵啵贝</button>
+        <button id="intiface" class="dusk">经 Intiface</button>
+      </div>
+      <p id="ble-note" class="note" hidden>这个浏览器不支持直接蓝牙，请用安卓或电脑上的 Chrome，或者走 Intiface。</p>
+      <ul id="devices"></ul>
+      <p id="empty" class="note">玩具开机后点对应的按钮，在弹出的列表里选它。</p>
+    </section>
+
+    <button id="panic" class="panic">全部停下</button>
+
+    <section>
+      <h2>动静</h2>
+      <ul id="log"></ul>
+      <p class="note">开始中继后通知栏会多一条「中继运行中」（在放一段听不见的声音，防止安卓把页面冻住），这样切到别的 App 也能继续。万一还是断了，玩具会自动停。</p>
+    </section>
+  </main>
+  <script type="module" src="bridge.js"></script>
+</body>
+</html>
